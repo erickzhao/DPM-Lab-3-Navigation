@@ -1,13 +1,19 @@
 package ev3Navigation;
 
+import lejos.hardware.Sound;
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 
-public class Navigation implements Runnable {
+public class Navigation extends Thread {
 	
-	private static final EV3LargeRegulatedMotor leftMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("A"));
-	private static final EV3LargeRegulatedMotor rightMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("D"));
-	private static final Odometer odometer = new Odometer(leftMotor, rightMotor);
+	private Odometer odometer;
+	private EV3LargeRegulatedMotor leftMotor, rightMotor;
+	
+	public Navigation(Odometer odometer, EV3LargeRegulatedMotor leftMotor, EV3LargeRegulatedMotor rightMotor){
+		this.odometer = odometer;
+		this.leftMotor = leftMotor;
+		this.rightMotor = rightMotor;
+	}
 	
 	//constants
 	private static final int FORWARD_SPEED = 250;
@@ -20,44 +26,55 @@ public class Navigation implements Runnable {
 
 	@Override
 	public void run() {
-		// TODO Auto-generated method stub
-		
+		travelTo(60,30);
+		travelTo(30,30);
+		travelTo(30,60);
+		travelTo(60,0);
 	}
 	
-	public static void travelTo(double x, double y) {
+	public void travelTo(double x, double y) {
+		
+		for (EV3LargeRegulatedMotor motor : new EV3LargeRegulatedMotor[] {leftMotor, rightMotor}) {
+			motor.stop();
+			motor.setAcceleration(3000);
+		}
 		
 		navigating = true;
 		
 		double trajectoryX = x - odometer.getX();
 		double trajectoryY = y - odometer.getY();
+		double trajectoryAngle = Math.atan2(trajectoryX, trajectoryY);
 		
-		double trajectoryAngle = Math.atan2(trajectoryY, trajectoryX);
-		turnTo(trajectoryAngle);
+		Sound.beepSequenceUp();
+		leftMotor.setSpeed(ROTATE_SPEED);
+		rightMotor.setSpeed(ROTATE_SPEED);
+		turnTo(trajectoryAngle-odometer.getTheta());
 		
 		double trajectoryLine = Math.hypot(trajectoryX, trajectoryY);
 		
+		Sound.beepSequence();
+		leftMotor.setSpeed(FORWARD_SPEED);
+		rightMotor.setSpeed(FORWARD_SPEED);
 		leftMotor.rotate(convertDistanceForMotor(WHEEL_RADIUS, trajectoryLine),true);
 		rightMotor.rotate(convertDistanceForMotor(WHEEL_RADIUS, trajectoryLine),false);
-		
-		
 	}
 	
-	public static void turnTo(double theta) {
+	public void turnTo(double theta) {
 		
 		leftMotor.rotate(convertAngleForMotor(WHEEL_RADIUS, WHEEL_BASE, theta),true);
-		rightMotor.rotate(convertAngleForMotor(WHEEL_RADIUS, WHEEL_BASE, theta),false);
+		rightMotor.rotate(-convertAngleForMotor(WHEEL_RADIUS, WHEEL_BASE, theta),false);
 	}
 	
 	public static boolean isNavigating() {
 		return navigating;
 	}
 	
-	private static int convertDistanceForMotor(double radius, double distance){
+	private int convertDistanceForMotor(double radius, double distance){
 		return (int) (360*distance/(2*PI*radius));
 	}
 	
-	private static int convertAngleForMotor(double radius, double width, double angle){
-		return convertDistanceForMotor(radius, PI*width*angle/360);
+	private int convertAngleForMotor(double radius, double width, double angle){
+		return convertDistanceForMotor(radius, width*angle/2);
 	}
 
 

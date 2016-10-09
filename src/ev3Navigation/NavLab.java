@@ -12,6 +12,7 @@ public class NavLab {
 	//Initialize class variables
 	private static final EV3LargeRegulatedMotor leftMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("A"));
 	private static final EV3LargeRegulatedMotor rightMotor = new EV3LargeRegulatedMotor(LocalEV3.get().getPort("D"));
+	
 
 	
 	//constants
@@ -26,6 +27,7 @@ public class NavLab {
 		final TextLCD t = LocalEV3.get().getTextLCD();
 		Odometer odometer = new Odometer(leftMotor, rightMotor);
 		OdometryDisplay odometryDisplay = new OdometryDisplay(odometer, t);
+		Navigation nav = new Navigation(odometer, leftMotor, rightMotor);
 		
 		do {
 			t.clear();
@@ -40,8 +42,9 @@ public class NavLab {
 		} while (buttonChoice != Button.ID_LEFT && buttonChoice != Button.ID_RIGHT);
 		
 		if (buttonChoice == Button.ID_LEFT){
-			
-			//TODO: ADD CODE TO DO SIMPLE NAV
+			odometer.start();
+			odometryDisplay.start();
+			nav.start();
 		} else {
 			
 			//TODO: ADD CODE TO NAV AROUND OBJECTS

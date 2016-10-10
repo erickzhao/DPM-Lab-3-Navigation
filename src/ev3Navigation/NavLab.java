@@ -29,7 +29,10 @@ public class NavLab {
 		SensorModes usSensor = new EV3UltrasonicSensor(usPort);		// usSensor is the instance
 		SampleProvider usDistance = usSensor.getMode("Distance");	// usDistance provides samples from this instance
 		float[] usData = new float[usDistance.sampleSize()];		// usData is the buffer in which data are returned
-		RotatingSensor rs = new RotatingSensor(sensorMotor, leftMotor,rightMotor,usDistance,usData);
+		//RotatingSensor rs = new RotatingSensor(sensorMotor, leftMotor,rightMotor,usDistance,usData);
+		//EvasionDisplay ed = new EvasionDisplay(rs);
+		EvadeMode em = new EvadeMode(leftMotor, rightMotor, sensorMotor, usDistance, usData, WHEEL_RADIUS, WHEEL_BASE);
+		
 		
 		//display
 		int buttonChoice;
@@ -58,8 +61,7 @@ public class NavLab {
 		} else {
 			
 			//TODO: ADD CODE TO NAV AROUND OBJECTS
-			rs.start();
-			
+			em.start();
 		}
 		
 		while (Button.waitForAnyPress() != Button.ID_ESCAPE);

@@ -48,7 +48,7 @@ public class Navigation extends Thread {
 		Sound.beepSequenceUp();
 		leftMotor.setSpeed(ROTATE_SPEED);
 		rightMotor.setSpeed(ROTATE_SPEED);
-		turnTo(trajectoryAngle-odometer.getTheta());
+		turnTo(trajectoryAngle);
 		
 		double trajectoryLine = Math.hypot(trajectoryX, trajectoryY);
 		
@@ -61,8 +61,10 @@ public class Navigation extends Thread {
 	
 	public void turnTo(double theta) {
 		
-		leftMotor.rotate(convertAngleForMotor(WHEEL_RADIUS, WHEEL_BASE, theta),true);
-		rightMotor.rotate(-convertAngleForMotor(WHEEL_RADIUS, WHEEL_BASE, theta),false);
+		double angle = theta-odometer.getTheta();
+		
+		leftMotor.rotate(convertAngleForMotor(WHEEL_RADIUS, WHEEL_BASE, angle),true);
+		rightMotor.rotate(-convertAngleForMotor(WHEEL_RADIUS, WHEEL_BASE, angle),false);
 	}
 	
 	public static boolean isNavigating() {

@@ -52,11 +52,13 @@ public class AdvancedNavigation extends Thread {
 	
 	public void travelTo(double x, double y) {
 		
+		//reset motors
 		for (EV3LargeRegulatedMotor motor : new EV3LargeRegulatedMotor[] {leftMotor, rightMotor}) {
 			motor.stop();
 			motor.setAcceleration(3000);
 		}
 		
+		//get distance and angle, and then move
 		double trajectoryX = x - odometer.getX();
 		double trajectoryY = y - odometer.getY();
 		double trajectoryAngle = Math.atan2(trajectoryX, trajectoryY);
@@ -78,9 +80,9 @@ public class AdvancedNavigation extends Thread {
 		sensorMotor.resetTachoCount();
 		sensorMotor.setSpeed(SCAN_SPEED);
 		
-			
-		while (leftMotor.isMoving() || rightMotor.isMoving()) {
-			while (!sensorMotor.isMoving()){
+		
+		while (leftMotor.isMoving() || rightMotor.isMoving()) { // Scan the surrounding when the robot is moving
+			while (!sensorMotor.isMoving()){ //Rotate the sensor if it's not already rotating
 			if (sensorMotor.getTachoCount()>=CRITICAL_ANGLE){
 				sensorMotor.rotateTo(LEFT_ANGLE,true);
 			} else {
@@ -93,7 +95,7 @@ public class AdvancedNavigation extends Thread {
 			
 			if(distance <= bandCenter){
 				Sound.beep();
-				leftMotor.stop(true);
+				leftMotor.stop(true); // Stop the robot and quit navigation mode
 				rightMotor.stop(false);
 				navigating = false;
 			}
@@ -101,17 +103,17 @@ public class AdvancedNavigation extends Thread {
 		}
 		
 		if (!this.isNavigating()){
-			avoidObstacle();
-			sensorMotor.rotateTo(0);
-			navigating = true;
-			travelTo(x,y);
+			avoidObstacle(); // Implements bangbang controller to avoid the obstacle
+			sensorMotor.rotateTo(0); // reset sensor position
+			navigating = true; // re-enable navigation mode
+			travelTo(x,y); // continue traveling to destination
 			return;
 		}
 		sensorMotor.rotateTo(0);
 		
 	}
 	
-	public void turnTo(double theta) {
+	public void turnTo(double theta) { //method from navigation program
 		
 		double angle = getMinAngle(theta-odometer.getTheta());
 		
@@ -125,28 +127,36 @@ public class AdvancedNavigation extends Thread {
 		} else if (angle < -PI) {
 			angle = angle + 2*PI;
 		}
-		
 		return angle;
 	}
 	
+	/* returns: whether or not the vehicle is currently navigating
+	 */
 	public boolean isNavigating() {
 		return navigating;
 	}
-	
+	/* parameter: double distance representing the length of the line the vehicle has to run
+	 * returns: amount of degrees the motors have to turn to traverse this distance
+	 */
 	private int convertDistanceForMotor(double distance){
 		return (int) (360*distance/(2*PI*WHEEL_RADIUS));
 	}
-	
+	/* parameter: double angle representing the angle heading change in radians
+	 * returns: amount of degrees the motors have to turn to change this heading
+	 */
 	private int convertAngleForMotor(double angle){
 		return convertDistanceForMotor(WHEEL_BASE*angle/2);
 	}
 	
 	public void avoidObstacle(){
 		turnTo(odometer.getTheta()-PI/2);
+		// adjust the robot heading to ensure the avoidance of obstacles
 		sensorMotor.rotateTo(OBSTACLE_SENSOR_ANGLE);
 		
+		// define the exit condition of avoidance mode
 		double endAngle = odometer.getTheta()+PI*0.8;
 		
+		// engage bangbang controller to avoid the obstacle
 		while (odometer.getTheta()<endAngle){
 			us.fetchSample(usData,0);							// acquire data
 			distance=(int)(usData[0]*100.0);					// extract from buffer, cast to int

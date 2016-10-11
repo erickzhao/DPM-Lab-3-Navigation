@@ -1,7 +1,6 @@
 package ev3Navigation;
 
 import lejos.hardware.Sound;
-import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.robotics.SampleProvider;
 
@@ -30,11 +29,15 @@ public class AdvancedNavigation extends Thread {
 	
 	//constants
 	private static final int SCAN_SPEED = 175;
-	private static final int rightAngle = 55;
-	private static final int leftAngle = -55;
-	private static final int criticalAngle = 10;
+	private static final int RIGHT_ANGLE = 55;
+	private static final int LEFT_ANGLE = -55;
+	private static final int CRITICAL_ANGLE = 10;
 	private static final int FORWARD_SPEED = 250;
 	private static final int ROTATE_SPEED = 150;
+	private static final int OBSTACLE_SENSOR_ANGLE = 80;
+	private static final int OBSTACLE_FWD_SPEED = 150;
+	private static final int OBSTACLE_TURN_IN_SPEED = 275;
+	private static final int OBSTACLE_TURN_OUT_SPEED = 60;
 	private static final double WHEEL_RADIUS = NavLab.WHEEL_RADIUS;
 	private static final double WHEEL_BASE = NavLab.WHEEL_BASE;
 	private static final double PI = Math.PI;
@@ -54,7 +57,6 @@ public class AdvancedNavigation extends Thread {
 			motor.setAcceleration(3000);
 		}
 		
-		
 		double trajectoryX = x - odometer.getX();
 		double trajectoryY = y - odometer.getY();
 		double trajectoryAngle = Math.atan2(trajectoryX, trajectoryY);
@@ -69,8 +71,8 @@ public class AdvancedNavigation extends Thread {
 		Sound.beepSequence();
 		leftMotor.setSpeed(FORWARD_SPEED);
 		rightMotor.setSpeed(FORWARD_SPEED);
-		leftMotor.rotate(convertDistanceForMotor(WHEEL_RADIUS, trajectoryLine),true);
-		rightMotor.rotate(convertDistanceForMotor(WHEEL_RADIUS, trajectoryLine),true);
+		leftMotor.rotate(convertDistanceForMotor(trajectoryLine),true);
+		rightMotor.rotate(convertDistanceForMotor(trajectoryLine),true);
 		
 		int distance;
 		sensorMotor.resetTachoCount();
@@ -79,10 +81,10 @@ public class AdvancedNavigation extends Thread {
 			
 		while (leftMotor.isMoving() || rightMotor.isMoving()) {
 			while (!sensorMotor.isMoving()){
-			if (sensorMotor.getTachoCount()>=criticalAngle){
-				sensorMotor.rotateTo(leftAngle,true);
+			if (sensorMotor.getTachoCount()>=CRITICAL_ANGLE){
+				sensorMotor.rotateTo(LEFT_ANGLE,true);
 			} else {
-				sensorMotor.rotateTo(rightAngle,true);
+				sensorMotor.rotateTo(RIGHT_ANGLE,true);
 			}
 			}
 			us.fetchSample(usData,0);							// acquire data
@@ -111,35 +113,39 @@ public class AdvancedNavigation extends Thread {
 	
 	public void turnTo(double theta) {
 		
-		double angle = theta-odometer.getTheta();
+		double angle = getMinAngle(theta-odometer.getTheta());
 		
+		leftMotor.rotate(convertAngleForMotor(angle),true);
+		rightMotor.rotate(-convertAngleForMotor(angle),false);
+	}
+	
+	public double getMinAngle(double angle){
 		if (angle > PI) {
 			angle = 2*PI - angle;
 		} else if (angle < -PI) {
 			angle = angle + 2*PI;
 		}
 		
-		leftMotor.rotate(convertAngleForMotor(WHEEL_RADIUS, WHEEL_BASE, angle),true);
-		rightMotor.rotate(-convertAngleForMotor(WHEEL_RADIUS, WHEEL_BASE, angle),false);
+		return angle;
 	}
 	
 	public boolean isNavigating() {
 		return navigating;
 	}
 	
-	private int convertDistanceForMotor(double radius, double distance){
-		return (int) (360*distance/(2*PI*radius));
+	private int convertDistanceForMotor(double distance){
+		return (int) (360*distance/(2*PI*WHEEL_RADIUS));
 	}
 	
-	private int convertAngleForMotor(double radius, double width, double angle){
-		return convertDistanceForMotor(radius, width*angle/2);
+	private int convertAngleForMotor(double angle){
+		return convertDistanceForMotor(WHEEL_BASE*angle/2);
 	}
 	
 	public void avoidObstacle(){
-		turnTo(odometer.getTheta()-Math.PI/2);
-		sensorMotor.rotateTo(80);
+		turnTo(odometer.getTheta()-PI/2);
+		sensorMotor.rotateTo(OBSTACLE_SENSOR_ANGLE);
 		
-		double endAngle = odometer.getTheta()+Math.PI*0.8;
+		double endAngle = odometer.getTheta()+PI*0.8;
 		
 		while (odometer.getTheta()<endAngle){
 			us.fetchSample(usData,0);							// acquire data
@@ -147,18 +153,18 @@ public class AdvancedNavigation extends Thread {
 			int errorDistance = bandCenter - distance;
 			
 			if (Math.abs(errorDistance)<= bandWidth){ //moving in straight line
-				leftMotor.setSpeed(150);
-				rightMotor.setSpeed(150);
+				leftMotor.setSpeed(OBSTACLE_FWD_SPEED);
+				rightMotor.setSpeed(OBSTACLE_FWD_SPEED);
 				leftMotor.forward();
 				rightMotor.forward();
 			} else if (errorDistance > 0){ //too close to wall
-				rightMotor.setSpeed(150); 
-				leftMotor.setSpeed(60);// Setting the outer wheel to reverse
-				rightMotor.forward();
+				leftMotor.setSpeed(OBSTACLE_TURN_OUT_SPEED);// Setting the outer wheel to reverse
+				rightMotor.setSpeed(OBSTACLE_FWD_SPEED); 
 				leftMotor.backward();
+				rightMotor.forward();
 			} else if (errorDistance < 0){ // getting too far from the wall
-				rightMotor.setSpeed(150);
-				leftMotor.setSpeed(275);// Setting the outer wheel to move faster
+				rightMotor.setSpeed(OBSTACLE_FWD_SPEED);
+				leftMotor.setSpeed(OBSTACLE_TURN_IN_SPEED);// Setting the outer wheel to move faster
 				rightMotor.forward();
 				leftMotor.forward();
 			}

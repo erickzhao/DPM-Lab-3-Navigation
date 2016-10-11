@@ -57,8 +57,6 @@ public class NavLab {
 			odometryDisplay.start();
 			nav.start();
 		} else {
-			
-			//TODO: ADD CODE TO NAV AROUND OBJECTS
 			odometer.start();
 			odometryDisplay.start();
 			advNav.start();

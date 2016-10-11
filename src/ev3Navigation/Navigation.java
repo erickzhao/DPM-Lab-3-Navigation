@@ -53,28 +53,28 @@ public class Navigation extends Thread {
 		Sound.beepSequence();
 		leftMotor.setSpeed(FORWARD_SPEED);
 		rightMotor.setSpeed(FORWARD_SPEED);
-		leftMotor.rotate(convertDistanceForMotor(WHEEL_RADIUS, trajectoryLine),true);
-		rightMotor.rotate(convertDistanceForMotor(WHEEL_RADIUS, trajectoryLine),false);
+		leftMotor.rotate(convertDistanceForMotor(trajectoryLine),true);
+		rightMotor.rotate(convertDistanceForMotor(trajectoryLine),false);
 	}
 	
 	public void turnTo(double theta) {
 		
 		double angle = theta-odometer.getTheta();
 		
-		leftMotor.rotate(convertAngleForMotor(WHEEL_RADIUS, WHEEL_BASE, angle),true);
-		rightMotor.rotate(-convertAngleForMotor(WHEEL_RADIUS, WHEEL_BASE, angle),false);
+		leftMotor.rotate(convertAngleForMotor(angle),true);
+		rightMotor.rotate(-convertAngleForMotor(angle),false);
 	}
 	
 	public static boolean isNavigating() {
 		return navigating;
 	}
 	
-	private int convertDistanceForMotor(double radius, double distance){
-		return (int) (360*distance/(2*PI*radius));
+	private int convertDistanceForMotor(double distance){
+		return (int) (360*distance/(2*PI*WHEEL_RADIUS));
 	}
 	
-	private int convertAngleForMotor(double radius, double width, double angle){
-		return convertDistanceForMotor(radius, width*angle/2);
+	private int convertAngleForMotor(double angle){
+		return convertDistanceForMotor(WHEEL_BASE*angle/2);
 	}
 
 

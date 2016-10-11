@@ -1,7 +1,6 @@
 package ev3Navigation;
 
 import lejos.hardware.Sound;
-import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 
 public class Navigation extends Thread {
@@ -21,6 +20,7 @@ public class Navigation extends Thread {
 	private static final double WHEEL_RADIUS = NavLab.WHEEL_RADIUS;
 	private static final double WHEEL_BASE = NavLab.WHEEL_BASE;
 	private static final double PI = Math.PI;
+	
 	
 	private static boolean navigating = false;
 

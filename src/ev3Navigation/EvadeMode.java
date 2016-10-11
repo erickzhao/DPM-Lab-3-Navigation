@@ -14,11 +14,13 @@ public class EvadeMode extends Thread{
 	private float[] usData;
 	double wr,width;
 	private Odometer odometer;
+	private Navigation nav;
 	
 	
-	public EvadeMode (Odometer odometer, EV3LargeRegulatedMotor leftMotor, EV3LargeRegulatedMotor rightMotor,
+	public EvadeMode (Odometer odometer, Navigation nav, EV3LargeRegulatedMotor leftMotor, EV3LargeRegulatedMotor rightMotor,
 			EV3LargeRegulatedMotor sensorMotor, SampleProvider us, float[] usData, double wheelRadius, double width){
 		this.odometer = odometer;
+		this.nav = nav;
 		this.leftMotor = leftMotor;
 		this.rightMotor = rightMotor;
 		this.sensorMotor = sensorMotor;
@@ -26,17 +28,9 @@ public class EvadeMode extends Thread{
 		this.usData = usData;
 		this.wr = wheelRadius;
 		this.width = width;
-		
 	}
-	
-	Navigation nav = new Navigation(odometer, leftMotor, rightMotor);
 
 	public void run() {
-		
-		leftMotor.setSpeed(150);
-		rightMotor.setSpeed(150);
-		leftMotor.forward();
-		rightMotor.forward();
 		
 		int distance;
 		while (true) {
@@ -50,10 +44,8 @@ public class EvadeMode extends Thread{
 			}
 			try { Thread.sleep(50); } catch(Exception e){}		// Poor man's timed sampling
 		}
-		leftMotor.stop(true);
-		rightMotor.stop(false);
 		avoidObstacle();
-		}
+	}
 	
 	public void avoidObstacle(){
 		turnTo(odometer.getTheta()-Math.PI/2);

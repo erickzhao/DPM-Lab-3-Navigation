@@ -37,7 +37,7 @@ public class NavLab {
 		Odometer odometer = new Odometer(leftMotor, rightMotor);
 		OdometryDisplay odometryDisplay = new OdometryDisplay(odometer, t);
 		Navigation nav = new Navigation(odometer, leftMotor, rightMotor);
-		EvadeMode em = new EvadeMode(odometer,leftMotor, rightMotor, sensorMotor, usDistance, usData, WHEEL_RADIUS, WHEEL_BASE);
+		EvadeMode em = new EvadeMode(odometer, nav, leftMotor, rightMotor, sensorMotor, usDistance, usData, WHEEL_RADIUS, WHEEL_BASE);
 		
 		
 		do {
@@ -61,7 +61,6 @@ public class NavLab {
 			//TODO: ADD CODE TO NAV AROUND OBJECTS
 			odometer.start();
 			odometryDisplay.start();
-			em.start();
 		}
 		
 		while (Button.waitForAnyPress() != Button.ID_ESCAPE);

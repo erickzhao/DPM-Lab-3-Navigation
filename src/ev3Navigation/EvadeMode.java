@@ -7,24 +7,18 @@ import lejos.hardware.Sound;
 public class EvadeMode extends Thread{
 	
 	private EV3LargeRegulatedMotor sensorMotor, leftMotor, rightMotor;
-	private static final int WHEEL_SPEED = 200;
-	private static final int SCAN_SPEED = 100;
-	private static final int ANALYSE_SPEED = 30;
-	private static final int rightAngle = 45;
-	private static final int leftAngle = -45;
-	int bandCenter = 19;
+	int bandCenter = 11;
 	int bandWidth = 3;
 	int distance;
-	boolean detecting = true;
-	boolean analysing = true;
-	boolean evading = true;
 	private SampleProvider us;
 	private float[] usData;
 	double wr,width;
+	private Odometer odometer;
 	
 	
-	public EvadeMode (EV3LargeRegulatedMotor leftMotor, EV3LargeRegulatedMotor rightMotor,
+	public EvadeMode (Odometer odometer, EV3LargeRegulatedMotor leftMotor, EV3LargeRegulatedMotor rightMotor,
 			EV3LargeRegulatedMotor sensorMotor, SampleProvider us, float[] usData, double wheelRadius, double width){
+		this.odometer = odometer;
 		this.leftMotor = leftMotor;
 		this.rightMotor = rightMotor;
 		this.sensorMotor = sensorMotor;
@@ -34,102 +28,70 @@ public class EvadeMode extends Thread{
 		this.width = width;
 		
 	}
+	
+	Navigation nav = new Navigation(odometer, leftMotor, rightMotor);
 
 	public void run() {
-		//for testing
-		leftMotor.setSpeed(WHEEL_SPEED);
-		rightMotor.setSpeed(WHEEL_SPEED);
+		
+		leftMotor.setSpeed(150);
+		rightMotor.setSpeed(150);
 		leftMotor.forward();
 		rightMotor.forward();
 		
-		
 		int distance;
-		while (detecting) {
-			// Scanning the surrounding, stop when the robot encounter an obstacle
-			sensorMotor.setSpeed(SCAN_SPEED);
-			if (sensorMotor.getTachoCount()>5){
-				sensorMotor.rotateTo(leftAngle,true);
-			} else {
-			sensorMotor.rotateTo(rightAngle,true);
-			}
-			
-			while (sensorMotor.isMoving()){
-				us.fetchSample(usData,0);							// acquire data
-				distance=(int)(usData[0]*100.0);					// extract from buffer, cast to int
-				filter(distance);
-			
-				if(distance <= bandCenter){
-					sensorMotor.stop();
-					leftMotor.stop(true);
-					rightMotor.stop(false);
-					Sound.beep();
-					detecting = false;
-				}
-		
-				try { Thread.sleep(50); } catch(Exception e){}		// Poor man's timed sampling
-			}		
-		}
-		
-		// Analyse the position of the obstacle
-		sensorMotor.rotateTo(-90);
-		int closestAngle = 0;
-		int closestPoint = bandCenter;
-		sensorMotor.setSpeed(ANALYSE_SPEED);
-		while (analysing){
+		while (true) {
 			us.fetchSample(usData,0);							// acquire data
 			distance=(int)(usData[0]*100.0);					// extract from buffer, cast to int
 			filter(distance);
-			sensorMotor.rotateTo(90,true);
-			if (distance<=closestPoint){
-				closestAngle = sensorMotor.getTachoCount();
-				closestPoint = distance;
-			}
-			if (sensorMotor.getTachoCount() == 90){
-				analysing = false;
+			
+			if(distance <= bandCenter){
+				Sound.beep();
+				break;
 			}
 			try { Thread.sleep(50); } catch(Exception e){}		// Poor man's timed sampling
 		}
-		sensorMotor.setSpeed(SCAN_SPEED);
-		// Evading the obstacle
-		
-		if (closestAngle <= 0){
-			sensorMotor.rotateTo(-90);
-			leftMotor.rotate(convertAngle(wr, width, (double) Math.abs(closestAngle)), true);
-			rightMotor.rotate(-convertAngle(wr, width, (double) Math.abs(closestAngle)), false);
-		} else{
-			sensorMotor.rotateTo(90);
-			leftMotor.rotate(-convertAngle(wr, width, (double) Math.abs(closestAngle)), true);
-			rightMotor.rotate(convertAngle(wr, width, (double) Math.abs(closestAngle)), false);
+		leftMotor.stop(true);
+		rightMotor.stop(false);
+		avoidObstacle();
 		}
-			
-		while (evading){
+	
+	public void avoidObstacle(){
+		turnTo(odometer.getTheta()-Math.PI/2);
+		sensorMotor.rotate(80);
+		
+		double endAngle = odometer.getTheta()+Math.PI*0.8;
+		
+		while (odometer.getTheta()<endAngle){
 			us.fetchSample(usData,0);							// acquire data
 			distance=(int)(usData[0]*100.0);					// extract from buffer, cast to int
-			filter(distance);
-			while (distance <= bandCenter+bandWidth){
+			int errorDistance = bandCenter - distance;
+			
+			if (Math.abs(errorDistance)<= bandWidth){ //moving in straight line
+				leftMotor.setSpeed(150);
+				rightMotor.setSpeed(150);
 				leftMotor.forward();
 				rightMotor.forward();
+			} else if (errorDistance > 0){ //too close to wall
+				rightMotor.setSpeed(150); 
+				leftMotor.setSpeed(60);// Setting the outer wheel to reverse
+				rightMotor.forward();
+				leftMotor.backward();
+			} else if (errorDistance < 0){ // getting too far from the wall
+				rightMotor.setSpeed(150);
+				leftMotor.setSpeed(275);// Setting the outer wheel to move faster
+				rightMotor.forward();
+				leftMotor.forward();
 			}
-			leftMotor.rotate(convertDistance(wr, 2*width), true); 
-			rightMotor.rotate(convertDistance(wr, 2*width), false);
-			
-			try { Thread.sleep(50); } catch(Exception e){}		// Poor man's timed sampling
 		}
-				
-		}
-			
+		Sound.beep();
+		leftMotor.stop();
+		rightMotor.stop();
 		
-		
-		
-				
-				
-	
+	}
 	
 	public int readUSDistance() {
 		return this.distance;
 	}
-		
-	
 	
 	// Filtering out bad results
 	public void filter(int distance){
@@ -155,14 +117,21 @@ public class EvadeMode extends Thread{
 			}
 	}
 	
-	private static int convertDistance(double radius, double distance) {
-		return (int) ((180.0 * distance) / (Math.PI * radius));
+	private int convertDistanceForMotor(double radius, double distance){
+		return (int) (360*distance/(2*Math.PI*radius));
 	}
 
-	private static int convertAngle(double radius, double width, double angle) {
-		return convertDistance(radius, Math.PI * width * angle / 360.0);
+	private int convertAngleForMotor(double radius, double width, double angle){
+		return convertDistanceForMotor(radius, width*angle/2);
 	}
 	
+public void turnTo(double theta) {
+		
+		double angle = theta-odometer.getTheta();
+		
+		leftMotor.rotate(convertAngleForMotor(wr, width, angle),true);
+		rightMotor.rotate(-convertAngleForMotor(wr, width, angle),false);
+	}
 }
 
 

@@ -26,9 +26,7 @@ public class Navigation extends Thread {
 
 	@Override
 	public void run() {
-		travelTo(60,30);
-		travelTo(30,30);
-		travelTo(30,60);
+		travelTo(0,60);
 		travelTo(60,0);
 	}
 	

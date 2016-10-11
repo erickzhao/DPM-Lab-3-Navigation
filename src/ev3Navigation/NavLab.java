@@ -4,7 +4,6 @@ import lejos.hardware.Button;
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.lcd.TextLCD;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
-import lejos.hardware.port.MotorPort;
 import lejos.hardware.port.Port;
 import lejos.hardware.sensor.EV3UltrasonicSensor;
 import lejos.hardware.sensor.SensorModes;
@@ -29,7 +28,6 @@ public class NavLab {
 		SensorModes usSensor = new EV3UltrasonicSensor(usPort);		// usSensor is the instance
 		SampleProvider usDistance = usSensor.getMode("Distance");	// usDistance provides samples from this instance
 		float[] usData = new float[usDistance.sampleSize()];		// usData is the buffer in which data are returned
-		EvadeMode em = new EvadeMode(leftMotor, rightMotor, sensorMotor, usDistance, usData, WHEEL_RADIUS, WHEEL_BASE);
 		
 		
 		//display
@@ -39,6 +37,8 @@ public class NavLab {
 		Odometer odometer = new Odometer(leftMotor, rightMotor);
 		OdometryDisplay odometryDisplay = new OdometryDisplay(odometer, t);
 		Navigation nav = new Navigation(odometer, leftMotor, rightMotor);
+		EvadeMode em = new EvadeMode(odometer,leftMotor, rightMotor, sensorMotor, usDistance, usData, WHEEL_RADIUS, WHEEL_BASE);
+		
 		
 		do {
 			t.clear();
@@ -59,6 +59,8 @@ public class NavLab {
 		} else {
 			
 			//TODO: ADD CODE TO NAV AROUND OBJECTS
+			odometer.start();
+			odometryDisplay.start();
 			em.start();
 		}
 		
